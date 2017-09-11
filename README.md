@@ -62,6 +62,9 @@ Calling `getCoinAttr(symbol, attr, asString[optional])` will get any of the attr
     "percent_change_7d": "-13.48",
     "last_updated": "1504791305"
     So to display the percent change in the last 1h:
+    
+And here's how to use it
+
     =getCoinAttr("ETH", "percent_change_1h")/100
 
 
