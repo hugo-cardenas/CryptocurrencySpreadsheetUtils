@@ -10,9 +10,11 @@ https://docs.google.com/spreadsheets/d/1lnE260-F7TSs6onegSVYgRAP0ZZeuUy2YsfO2Ww_
 
 The easiest way to use it is to make a copy of the spreadsheet above.
 
-## Using
+You can also add the `CryptocurrencySpreadsheetUtils.gs` script in Tools > Script editor.
 
-Add script in Tools > Script editor. Then to use, simply add =getCoinPrice("SYMBOL") in a row. For example, Bitcoin would be
+## Getting Coin Prices
+
+Getting coin prices is really easy, just add =getCoinPrice("SYMBOL") in a row. For example, Bitcoin would be
     
     =getCoinPrice("BTC")
     
@@ -24,51 +26,64 @@ Litecoin would be
 
     =getCoinPrice("LTC")       
  
-Almost every crypto currency should work because data is fetched from coinmarketcap.com's API.
-which has many and updates pretty regularly. Data is cached for 25 minutes.
+Almost every crypto currency should work because data is fetched from CoinMarketCap.com's API.
+
+Coinbin.org is also supported and can be used by specifying the second parameter, like this:
+
+    =getCoinPrice("BTC", "coinbin")
     
-Questions or comments email contact@bradjasper.com or @bradjasper
+If you want to use Coinbin by default you can edit it in the script. You can also add new API providers if Coinbin and CoinMarketCap don't have what you need.
 
-Happy trading—be safe out there!
+## Getting Coin Attributes
 
-## Refresh
+Getting other attributes besides price is really easy too. To retrieve the current Litecoin rank from Coinbin:
 
-The `refresh()` function updates the cache and update all getCoin* functions with an (unused) timestamp argument to force recalculation.
+    =getCoinAttr("LTC", "rank", "coinbin")
 
-This function is designed to be attached to a "button" on the spreadsheet.
-To insert a "button" use Insert > Drawing to draw your button and place
-it on your spreadsheet and then right click the button you just created
-and select the drop down menu and choose Assign Script and enter "refresh".
-IMPORTANT NOTE: This function is "fragile" (i.e. easily broken) - it does
-some simple text manipulation to add the timestamp to the formula.  But it
-works for simple cases.
+Or here's how to get the 24 hour volume of Ethereum from CoinMarketCap
 
-## Other attributes
-
-Calling `getCoinAttr(symbol, attr, asString[optional])` will get any of the attributes returned by the api, as most of these are numbers we return as float, unless asString is set as true.  As of time of writing here are the available attributes with sample values for ETH:
-
-    "id": "ethereum",
-    "name": "Ethereum",
-    "symbol": "ETH",
-    "rank": "2",
-    "price_usd": "330.312",
-    "price_btc": "0.0706645",
-    "24h_volume_usd": "797430000.0",
-    "market_cap_usd": "31208113427.0",
-    "available_supply": "94480713.0",
-    "total_supply": "94480713.0",
-    "percent_change_1h": "1.26",
-    "percent_change_24h": "1.57",
-    "percent_change_7d": "-13.48",
-    "last_updated": "1504791305"
-    So to display the percent change in the last 1h:
+    =getCoinAttr("ETH", "24h_volume_usd", "coinmarketcap")
     
-And here's how to use it
+Here is CoinMarketCap's full attribute list:
 
-    =getCoinAttr("ETH", "percent_change_1h")/100
+    {
+        "id": "bitcoin", 
+        "name": "Bitcoin", 
+        "symbol": "BTC", 
+        "rank": "1", 
+        "price_usd": "3682.84", 
+        "price_btc": "1.0", 
+        "24h_volume_usd": "768015000.0", 
+        "market_cap_usd": "61081971156.0", 
+        "available_supply": "16585562.0", 
+        "total_supply": "16585562.0", 
+        "percent_change_1h": "-0.59", 
+        "percent_change_24h": "-2.46", 
+        "percent_change_7d": "1.0", 
+        "last_updated": "1506297552"
+    }
+    
+Here is Coinbin's full attribute list:
 
+    {
+        "btc": 1.00000000, 
+        "name": "Bitcoin", 
+        "rank": 1, 
+        "ticker": "btc", 
+        "usd": 3689.71
+    }
+    
+## Updating data
+
+Google Sheets caches data by default for a long time. To fix this, you must cache bust the function. This means adding some random number to the end of the =getCoin* functions. The `refresh()` function does this automatically.
+
+There are two ways to use it:
+
+1. The script has a cryptocurrency menubar that can run the refresh function. This requires special permissions from Google.
+2. Add a drawing with an action on your spreadsheet that acts like a button. To insert a "button" use Insert > Drawing to draw your button and place it on your spreadsheet and then right click the button you just created and select the drop down menu and choose Assign Script and enter "refresh".
 
 ## Versions
 
-- v0.2 — 9/7/2017 — Added refresh() and getCoinAttr() functions by John Harding
+- v0.3 — 9/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
+- v0.2 — 9/07/2017 — Added refresh() and getCoinAttr() functions by John Harding
 - v0.1 — 6/29/2017 — Initial release
