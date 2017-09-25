@@ -1,181 +1,405 @@
 /**
-    Cryptocurrency Spreadsheet Utils
+  MIT License
+  
+  Copyright (c) 2017 Brad Jasper
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+  
+  
+  # Cryptocurrency Spreadsheet Utils
 
-    v0.1
-    6/29/2017
-    by Brad Jasper
+  Provides useful functions for Google Sheets to get cryptocurrency prices and information.
+  For example, to get the current price of Bitcoin you can enter:
+  
+      =getCoinPrice("BTC")
+      
+  You can also change the default price API (currently coinmarketcap, coinbin is also supported):
+  
+      =getCoinPrice("ETH", "coinbin")
+      
+  Alternatively you can change the DEFAULT_CRYPTO_SERVICE variable below to change it globally.
+  
+  Other useful functions include retrieving specific attributes from an API. For example, here's how
+  to retrieve the current Litecoin rank from Coinbin:
+    
+      =getCoinAttr("LTC", "rank", "coinbin")
+      
+  Or here's how to get the 24 hour volume of Ethereum from CoinMarketCap
+  
+      =getCoinAttr("ETH", "24h_volume_usd", "coinmarketcap")
+      
 
-    A simple set of utilites for working with cryptocurrencies in Google Sheets.
+  You can of course also implement your own crypto API partners if Coinbin and CoinMarketCap don't have what you need.
+  
+  Review the API documentation below to see specific attributes.
+  
+  
+  Created by Brad Jasper (http://bradjasper.com/)
+  
+  v0.3 — 9/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
+  v0.2 — 9/07/2017 — Added refresh() and getCoinAttr() functions by John Harding
+  v0.1 — 6/29/2017 — Initial release
+  
+  ## Planned
 
-    To use, simply add =getCoinPrice("SYMBOL") in a row. For example, Bitcoin would be
-
-        =getCoinPrice("BTC")
-
-    Ethereum would be
-
-        =getCoinPrice("ETH")
-
-    Litecoin would be
-
-        =getCoinPrice("LTC")
-
-    Almost every crypto currency should work because data is fetched from coinmarketcap.com API,
-    which has many and updates pretty regularly. Data is cached for 25 minutes.
-
-    Requires Google Sheets permission because we're requesting an external service.
-    A version without this permission exists here, but doesn't cache and is much slower:
-        https://docs.google.com/spreadsheets/d/170ps_Xpo3fVsVi8niV8rSLJnZ5GFsV7GCEx6IpHNvtA/edit?usp=sharing
-
-    You should use this version if you can as it's much friendlier to coinmarketcap.com's API.
-
-    Questions or comments email contact@bradjasper.com or @bradjasper
-
-    Happy trading—be safe out there!
-
-
-    ----
-
-    v0.2
-    9/7/2017
-    by John Harding
-
-    refresh() -
-
-      updates the cache and update all getCoin* functions with an (unused) timestamp
-      argument to force recalculation.
-
-      This function is designed to be attached to a "button" on the spreadsheet.
-
-      To insert a "button" use Insert > Drawing to draw your button and place
-      it on your spreadsheet and then right click the button you just created
-      and select the drop down menu and choose Assign Script and enter "refresh".
-
-      IMPORTANT NOTE: This function is "fragile" (i.e. easily broken) - it does
-      some simple text manipulation to add the timestamp to the formula.  But it
-      works for simple cases.
-
-
-    getCoinAttr(symbol, attr, asString[optional]) -
-
-      get any of the attributes returned by the api, as most of these are numbers
-      we return as float, unless asString is set as true.  As of time of writing
-      here are the available attributes with sample values for ETH:
-
-        "id": "ethereum",
-        "name": "Ethereum",
-        "symbol": "ETH",
-        "rank": "2",
-        "price_usd": "330.312",
-        "price_btc": "0.0706645",
-        "24h_volume_usd": "797430000.0",
-        "market_cap_usd": "31208113427.0",
-        "available_supply": "94480713.0",
-        "total_supply": "94480713.0",
-        "percent_change_1h": "1.26",
-        "percent_change_24h": "1.57",
-        "percent_change_7d": "-13.48",
-        "last_updated": "1504791305"
-
-      So to display the percent change in the last 1h:
-
-        =getCoinAttr("ETH", "percent_change_1h")/100
-
+  - 1-click easy archiving to save data over time
+  - Historical trade data
+  - Functions for managing trades/accounting/taxes
+  
 **/
 
-var cache = CacheService.getScriptCache();
-var exchangeUrl = "https://api.coinmarketcap.com/v1/ticker/";
+/**
+ * Change this to coinbin or coinmarketcap (or implement a new CryptoService below and use that)
+ */
+var DEFAULT_CRYPTO_SERVICE = "coinmarketcap";
 
-function getCoinPrice(symbol) {
-  var coin = getCoinInfo(symbol);
-  if (!coin) {
-    return null;
-  }
-  return parseFloat(coin.price_usd);
+/**************************************************************************************/
+
+/**
+ CryptoService API Base Class
+ 
+ Responsible for common functionality between APIs. Likely don't need to change anything here.
+ 
+ Class is initialized with a base API URL that can be modified to return the correct URL for fetching coin info.
+**/
+function CryptoService(url) {
+  this.url = url;
+  this.coins = {};
+  this.name = this.constructor.name.toLowerCase();
 }
 
-function getCoinInfo(symbol) {
-  if (!symbol) return;
+/**
+ * This is a global cache of available providers. They get registered here after being defined
+ */
+CryptoService.PROVIDERS = {};
 
-  Logger.log("Getting coin info for " + symbol);
+/**
+ * Generic fetchURL function, to fetch, retrieve, and parse into JSON content
+ */
+CryptoService.prototype.fetchURL = function(url) {
+  Logger.log("Fetching " + url);
 
-  var coin = getCachedCoin(symbol);
-  if (!coin) {
-    Logger.log("No cached cound info found for " + symbol);
-    updateExchangeCache();
-  }
-
-  coin = getCachedCoin(symbol);
-  if (!coin) {
-    Logger.log("Unable to find information for " + symbol + " ...something is wrong with the script or service");
-    return null;
-  }
-
-  return coin;
-}
-
-function getCachedCoin(symbol) {
-  var cached = cache.get(symbol);
-  if (cached) {
-    try {
-      var coin = JSON.parse(cached);
-      return coin;
-    } catch (e) {
-      Logger.log("Error while parsing coin " + symbol + " from cache");
-    }
-  }
-}
-
-function updateExchangeCache() {
-  Logger.log("Updating exchange cached information");
-
-  var response = UrlFetchApp.fetch(exchangeUrl);
+  var response = UrlFetchApp.fetch(url);
   var content = response.getContentText();
   try {
     var data = JSON.parse(content);
   } catch (e) {
-    Logger.log("Error while parsing response from exchange: " + content);
+    Logger.log("Error while parsing response from API: " + content);
   }
+  
+  return data;
+}
 
-  var cachedCoins = {};
+/**
+ * Fetch and parse all coins
+ */
+CryptoService.prototype.fetchAllCoinInfo = function(url) {
+  return this.fetchURL(this.getAllCoinsURL());
+}
+
+/**
+ * Update all coin information. API should have at least once function that
+ * can get bulk price information—otherwise it'll be too slow.
+ */
+CryptoService.prototype.updateAllCoinInfo = function() {
+  Logger.log("Updating all coin information");
+  var data = this.fetchAllCoinInfo();
+  this.coins = this.parseAllCoinData(data);
+  Logger.log("Updated " + Object.keys(this.coins).length + " coins");
+}
+
+/**
+ * Each API handles responses differently, parse coin data into a reasonable format.
+ *
+ * Currently we don't normalize data, but might in the future. If you want a coin attr,
+ * you have to know how that specific API calls it.
+ */
+CryptoService.prototype.parseAllCoinData = function(data) {
+  return data;
+};
+
+/**
+ * Get all information for a coin. If a coin doesn't exist, attempt to fetch it
+ */
+CryptoService.prototype.getCoin = function(symbol) { 
+  symbol = symbol.toLowerCase();
+  if (this.coins[symbol]) {
+    return this.coins[symbol];
+  }
+   
+  this.updateAllCoinInfo();
+  return this.coins[symbol];
+}
+
+/**
+ * Get a coin attribute, with a potential fallback value
+ */
+CryptoService.prototype.getCoinAttr = function(symbol, attrName, failValue) {
+  var coin = this.getCoin(symbol);
+  if (coin) {
+    return coin[attrName];
+  }
+  return failValue;
+}
+
+/**
+ * Get a float (converted to number) coin attribute, with a potential fallback value
+ */
+CryptoService.prototype.getCoinFloatAttr = function(symbol, attrName, failValue) {
+  if (typeof failValue != "number") {
+    failValue = 0;
+  }
+  
+  var coin = this.getCoin(symbol);
+  if (coin) {
+    return parseFloat(coin[attrName]);
+  }
+  return failValue;
+}
+
+/**
+ * Get the coin price
+ */
+CryptoService.prototype.getCoinPrice = function(symbol) {
+  return this.getCoinFloatAttr(symbol, this.getCoinPriceKey());
+}
+
+/**
+ * Get the coin price key, used in subclasses
+ */
+CryptoService.prototype.getCoinPriceKey = function(keyAttrName) {
+  throw new Error("Implement in sub-class");
+}
+
+/**
+ * Get the URL for all coin price information, used in subclasses
+ */
+
+CryptoService.prototype.getAllCoinsURL = function() {
+  throw new Error("Impelement in sub-class");
+}
+
+/**************************************************************************************/
+
+/**
+ * Coinbin API (https://coinbin.org/)
+ *
+ * Partial implementation of Coinbin API so we can use it in Google Sheets
+ *
+ * API structure looks like this, you can grab any of these attributes with getCoinAttr.
+ *
+ *    {
+ *     "coin": {
+ *       "btc": 1.00000000, 
+ *       "name": "Bitcoin", 
+ *       "rank": 1, 
+ *       "ticker": "btc", 
+ *       "usd": 3689.71
+ *     }
+ *   }
+ */
+function Coinbin() {
+  CryptoService.call(this, "https://coinbin.org/");
+}
+
+/**
+ * Setup prototype inheritence for Coinbin. This lets Coinbin use CryptoService as a base class
+ * If you implement your own class, you'll need to add this.
+ */
+Coinbin.prototype = Object.create(CryptoService.prototype);
+Coinbin.prototype.constructor = Coinbin;
+
+CryptoService.PROVIDERS["coinbin"] = new Coinbin();
+
+/**
+ * Return URL for all coins
+ */
+Coinbin.prototype.getAllCoinsURL = function() {
+  return this.url + "coins";
+}
+
+/**
+ * Parse data from all coins
+ */
+Coinbin.prototype.parseAllCoinData = function(data) {
+  return data.coins;
+}
+
+/**
+ * Return key for price
+ */
+Coinbin.prototype.getCoinPriceKey = function(symbol) {
+  return "usd";
+}
+
+/**************************************************************************************/
+
+/**
+ * CoinMarketCap API (https://api.coinmarketcap.com/v1/)
+ *
+ * Partial implementation of CoinMarketCap API so we can use it in Google Sheets
+ *
+ * API structure looks like this, you can grab any of these attributes with getCoinAttr.
+ *
+ *  {
+ *       "id": "bitcoin", 
+ *       "name": "Bitcoin", 
+ *       "symbol": "BTC", 
+ *       "rank": "1", 
+ *       "price_usd": "3682.84", 
+ *       "price_btc": "1.0", 
+ *       "24h_volume_usd": "768015000.0", 
+ *       "market_cap_usd": "61081971156.0", 
+ *       "available_supply": "16585562.0", 
+ *       "total_supply": "16585562.0", 
+ *       "percent_change_1h": "-0.59", 
+ *       "percent_change_24h": "-2.46", 
+ *       "percent_change_7d": "1.0", 
+ *       "last_updated": "1506297552"
+ * },
+ */
+function CoinMarketCap() {
+  CryptoService.call(this, "https://api.coinmarketcap.com/v1/");
+}
+
+/**
+ * Setup prototype inheritence for CoinMarketCap. This lets CoinMarketCap use CryptoService as a base class
+ * If you implement your own class, you'll need to add this.
+ */
+CoinMarketCap.prototype = Object.create(CryptoService.prototype);
+CoinMarketCap.prototype.constructor = CoinMarketCap;
+
+/**
+ * Return URL for all coins
+ */
+CoinMarketCap.prototype.getAllCoinsURL = function() {
+  return this.url + "ticker";
+}
+
+/**
+ * Parse data from all coins. For CoinMarketCap we have to lowercase the symbol names
+ */
+CoinMarketCap.prototype.parseAllCoinData = function(data) {
+  // Just lower-case the data...
+  var coins = {};
   for (var i in data) {
     var coin = data[i];
-    cachedCoins[coin.symbol] = JSON.stringify(coin);
+    var symbol = coin.symbol.toLowerCase();
+    coins[symbol] = coin;
   }
-
-  if (cachedCoins) {
-    Logger.log("Caching " + Object.keys(cachedCoins).length + " exchange prices");
-    cache.putAll(cachedCoins);
-  } else {
-    Logger.log("No cached coins found");
-  }
-}
-
-/*
-  JDH Additions v0.2 additions
-*/
-
-
-/**
-  Fetch the given symbol from the cache and return the value for the given attribute.
-  Default is to try to parse as float, pass asString=true to return the string value.
-*/
-function getCoinAttr(symbol, attr, asString) {
-  var coin = getCoinInfo(symbol);
-  if (!coin) {
-    return null;
-  }
-  if (asString===true) {
-    return coin[attr];
-  }
-  return parseFloat(coin[attr]);
+  return coins;
 }
 
 /**
-  Update the cache and then loop through all getCoin* functions and add a timestamp
-  to the argument list to force the function to be recaclulated.
-*/
+ * Return key for price
+ */
+CoinMarketCap.prototype.getCoinPriceKey = function() {
+  return "price_usd";
+}
+
+/**************************************************************************************/
+
+/**
+ * Register Crypto API providers
+ */
+var PROVIDERS = [
+  new Coinbin(),
+  new CoinMarketCap(),
+];
+  
+/**
+ * Private helper function for finding providers by name
+ */
+function _provider(name) {
+  for (var i in PROVIDERS) {
+    if (PROVIDERS[i].name == name) {
+      return PROVIDERS[i];
+    }
+  }
+}
+
+/**
+ * Private cache of currently used APIs. So we know which ones are being used when we refresh
+ */
+
+var _apis = {};
+
+/**
+ * Private helper function for finding apis by name (with backup to default service)
+ */
+function _api(service) {
+  var api = _apis[service];
+  if (!api) {
+    api = _provider(service) || _provider(DEFAULT_CRYPTO_SERVICE);
+    if (api) {
+      _apis[service] = api;
+    }
+  }
+  
+  return api;
+}
+
+/**************************************************************************************/
+
+/**
+ * getCoinPrice
+ *
+ * Public function for retrieving crypto coin price, from a specific service
+ */
+function getCoinPrice(symbol, service) {
+  return _api(service).getCoinPrice(symbol);
+}
+
+/**
+ * getCoinAttr
+ *
+ * Public function for retrieving a crypto coin attr, from a specific service.
+ * You must know the name of the attribute from the API you want.
+ */
+function getCoinAttr(symbol, attr, service) {
+  return _api(service).getCoinAttr(symbol, attr);
+}
+
+/**
+ * getCoinFloatAttr
+ *
+ * Public function for retrieving a numeric crypto coin attr, from a specific service.
+ * You must know the name of the attribute from the API you want. Will be converted to a number.
+ */
+function getCoinFloatAttr(symbol, attr, service) {
+  return _api(service).getCoinFloatAttr(symbol, attr);
+}
+
+/**
+ * refresh
+ *
+ * Refresh all currently used APIs and cache bust all =getCoin* functions
+ *
+ * Google Sheets makes it hard to update data frequently, so we have to add a random timestamp parameter
+ * to the end.
+ */
 function refresh() {
-  updateExchangeCache();
+  
+  for (var service in _apis) {
+    var api = _apis[service];
+    api.updateAllCoinInfo();
+  }
 
   var sheet = SpreadsheetApp.getActiveSheet();
   var data = sheet.getDataRange().getFormulas();
@@ -190,10 +414,9 @@ function refresh() {
   }
 }
 
-/*
-  Private function - performs simple string manipulation to add a dummy timestamp
-  argument to the end of the formula.  This could be improved.  Big time.
-*/
+/**
+ * Private function to add a random timestamp to an end of a formula. This is needed to cache bust the =getCoin* functions
+ */
 function _addTimestampArg(formula) {
   var now = new Date();
   var partAfterFunction="";
@@ -208,4 +431,12 @@ function _addTimestampArg(formula) {
     parts.push(newLastPart);
   }
   return parts.join(",");
+}
+
+/**
+ * Create a cryptocurrency menu item to refresh prices
+ */
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('Cryptocurrency').addItem('Refresh Prices', 'refresh').addToUi();
 }
