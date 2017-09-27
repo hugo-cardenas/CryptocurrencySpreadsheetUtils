@@ -87,3 +87,7 @@ There are two ways to use it:
 - v0.3 — 9/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
 - v0.2 — 9/07/2017 — Added refresh() and getCoinAttr() functions by John Harding
 - v0.1 — 6/29/2017 — Initial release
+
+## About
+
+Built by Brad Jasper (http://bradjasper.com)
