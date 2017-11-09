@@ -52,7 +52,8 @@
   
   Created by Brad Jasper (http://bradjasper.com/)
   
-  v0.3 — 9/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
+  v0.4 — 11/9/2017 — Fixed limit with CoinMarketCap API reponses
+  v0.3 — 9/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
   v0.2 — 9/07/2017 — Added refresh() and getCoinAttr() functions by John Harding
   v0.1 — 6/29/2017 — Initial release
   
