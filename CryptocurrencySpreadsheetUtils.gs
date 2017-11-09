@@ -289,7 +289,7 @@ CoinMarketCap.prototype.constructor = CoinMarketCap;
  * Return URL for all coins
  */
 CoinMarketCap.prototype.getAllCoinsURL = function() {
-  return this.url + "ticker";
+  return this.url + "ticker/?limit=0";
 }
 
 /**
