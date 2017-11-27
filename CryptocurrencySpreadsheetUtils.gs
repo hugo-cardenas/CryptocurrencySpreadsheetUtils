@@ -60,6 +60,7 @@
   
   ## Planned
 
+  - Handle coins with the same symbol
   - 1-click easy archiving to save data over time
   - Historical trade data
   - Functions for managing trades/accounting/taxes
