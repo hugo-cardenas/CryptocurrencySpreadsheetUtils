@@ -84,10 +84,11 @@ There are two ways to use it:
 
 ## Versions
 
-- v0.4 — 11/9/2017 — Fixed limit with CoinMarketCap API reponses
-- v0.3 — 9/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
-- v0.2 — 9/07/2017 — Added refresh() and getCoinAttr() functions by John Harding
-- v0.1 — 6/29/2017 — Initial release
+- v0.5 — 11/26/2017 — Fixed multi-coin issue by sorting coins (thanks @jeromedalbert)
+- v0.4 — 11/09/2017 — Fixed limit with CoinMarketCap API reponses
+- v0.3 — 09/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
+- v0.2 — 09/07/2017 — Added refresh() and getCoinAttr() functions by John Harding
+- v0.1 — 06/29/2017 — Initial release
 
 ## About
 
