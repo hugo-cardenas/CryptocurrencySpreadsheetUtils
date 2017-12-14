@@ -51,7 +51,8 @@
   
   
   Created by Brad Jasper (http://bradjasper.com/)
-  
+
+  v0.6 — 12/13/2017 — Cleaned up code (thanks @jeromedalbert)
   v0.5 — 11/26/2017 — Fixed multi-coin issue by sorting coins (thanks @jeromedalbert)
   v0.4 — 11/09/2017 — Fixed limit with CoinMarketCap API reponses
   v0.3 — 09/24/2017 — Created pluggable API backends, added Coinbin API, cleaned up code & docs.
