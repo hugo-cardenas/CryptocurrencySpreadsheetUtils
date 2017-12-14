@@ -23,6 +23,7 @@
   
   
   # Cryptocurrency Spreadsheet Utils
+
   Provides useful functions for Google Sheets to get cryptocurrency prices and information.
   For example, to get the current price of Bitcoin you can enter:
   
@@ -43,6 +44,7 @@
   
       =getCoinAttr("ETH", "24h_volume_usd", "coinmarketcap")
       
+
   You can of course also implement your own crypto API partners if Coinbin and CoinMarketCap don't have what you need.
   
   Review the API documentation below to see specific attributes.
@@ -57,6 +59,7 @@
   v0.1 — 06/29/2017 — Initial release
   
   ## Planned
+
   - Handle coins with the same symbol
   - 1-click easy archiving to save data over time
   - Historical trade data
@@ -317,77 +320,6 @@ CoinMarketCap.prototype.getCoinPriceKey = function() {
   return "price_usd";
 }
 
-
-/**************************************************************************************/
-
-/**
- * Hitbtc API (https://api.hitbtc.com/api/2)
- *
- */
-function Hitbtc() {
-  CryptoService.call(this, "https://api.hitbtc.com/api/2/public/");
-}
-
-Hitbtc.prototype = Object.create(CryptoService.prototype);
-Hitbtc.prototype.constructor = Hitbtc;
-
-/**
- * Return URL for all coins
- */
-Hitbtc.prototype.getCoinPrice = function(symbol, destSymbol ) {
-  var data = this.fetchURL(this.url + "ticker/" + symbol + destSymbol);
-  var price = parseFloat(data.last);
-  
-  return price;
-}
-
-
-/**************************************************************************************/
-
-/**
- * Hitbtc API (https://bittrex.com/api/v1.1/public/)
- *
- */
-function Bittrex() {
-  CryptoService.call(this, "https://bittrex.com/api/v1.1/public/");
-}
-
-Bittrex.prototype = Object.create(CryptoService.prototype);
-Bittrex.prototype.constructor = Bittrex;
-
-/**
- * Return URL for all coins
- */
-Bittrex.prototype.getCoinPrice = function(symbol, destSymbol ) {
-  var data = this.fetchURL(this.url + "getticker/?market=" + destSymbol + "-" + symbol);
-  var price = parseFloat(data.result.Last);
-  
-  return price;
-}
-
-
-/**************************************************************************************/
-
-/**
- * Hitbtc API (https://cex.io/api/)
- *
- */
-function Cexio() {
-  CryptoService.call(this, "https://cex.io/api/");
-}
-
-Cexio.prototype = Object.create(CryptoService.prototype);
-Cexio.prototype.constructor = Cexio;
- 
-Cexio.prototype.getCoinPrice = function(symbol, destSymbol ) {
-  var data = this.fetchURL(this.url + "ticker/" + symbol + "/" + destSymbol);
-  var price = parseFloat(data.last);
-  
-  return price;
-}
-
-
-
 /**************************************************************************************/
 
 /**
@@ -396,9 +328,6 @@ Cexio.prototype.getCoinPrice = function(symbol, destSymbol ) {
 var PROVIDERS = [
   new Coinbin(),
   new CoinMarketCap(),
-  new Hitbtc(),
-  new Bittrex(),
-  new Cexio()
 ];
   
 /**
@@ -438,11 +367,10 @@ function _api(service) {
 /**
  * getCoinPrice
  *
- * Public function for retrieving crypto coin price, from a specific service, in a specific currency
+ * Public function for retrieving crypto coin price, from a specific service
  */
-
-function getCoinPrice(symbol, service, destSymbol) {
-  return _api(service).getCoinPrice(symbol, destSymbol);
+function getCoinPrice(symbol, service) {
+  return _api(service).getCoinPrice(symbol);
 }
 
 /**
