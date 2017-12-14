@@ -135,19 +135,13 @@ CryptoService.prototype.parseAllCoinData = function(data) {
 };
 
 /**
- * Get all information for a coin.
- *
- * If a coin doesn't exist, attempt to fetch it.
- * If multiple coins are found, get the first one.
+ * Get all information for a coin. If a coin doesn't exist, attempt to fetch it.
  */
 CryptoService.prototype.getCoin = function(symbol) {
   symbol = symbol.toLowerCase();
   if (!this.coins[symbol]) this.updateAllCoinInfo();
 
-  var coin = this.coins[symbol];
-  if (coin instanceof Array) coin = coin[0];
-
-  return coin;
+  return this.coins[symbol];
 }
 
 /**
@@ -296,9 +290,9 @@ CoinMarketCap.prototype.getAllCoinsURL = function() {
 }
 
 /**
- * Parse data from all coins. For CoinMarketCap we have to:
- * - lowercase the symbol names
- * - sort coins with the same symbol by descending order of market capitalization
+ * Parse data from all coins. For CoinMarketCap we have to lowercase the symbol names.
+ *
+ * If there are coins with the same symbol, only store the one with the highest market cap.
  */
 CoinMarketCap.prototype.parseAllCoinData = function(data) {
   var coins = {};
@@ -307,13 +301,10 @@ CoinMarketCap.prototype.parseAllCoinData = function(data) {
     var symbol = coin.symbol.toLowerCase();
 
     if (coins[symbol] == undefined) {
-      coins[symbol] = [coin];
+      coins[symbol] = coin;
     }
-    else {
-      coins[symbol].push(coin);
-      coins[symbol].sort(function(coin1, coin2) {
-        return parseFloat(coin2.market_cap_usd) - parseFloat(coin1.market_cap_usd);
-      });
+    else if (parseFloat(coin.market_cap_usd) > parseFloat(coins[symbol].market_cap_usd)) {
+      coins[symbol] = coin;
     }
   }
   return coins;
