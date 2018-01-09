@@ -72,6 +72,7 @@
  * Change this to coinbin or coinmarketcap (or implement a new CryptoService below and use that)
  */
 var DEFAULT_CRYPTO_SERVICE = "coinmarketcap";
+var COINMARKETCAP_OUTPUT_CURRENCY = "eur";
 
 /**************************************************************************************/
 
@@ -277,6 +278,7 @@ Coinbin.prototype.getCoinPriceKey = function(symbol) {
  */
 function CoinMarketCap() {
   CryptoService.call(this, "https://api.coinmarketcap.com/v1/");
+  this.outputCurrency = COINMARKETCAP_OUTPUT_CURRENCY;
 }
 
 /**
@@ -290,7 +292,7 @@ CoinMarketCap.prototype.constructor = CoinMarketCap;
  * Return URL for all coins
  */
 CoinMarketCap.prototype.getAllCoinsURL = function() {
-  return this.url + "ticker/?limit=0";
+  return this.url + "ticker/?limit=0&convert=" + this.outputCurrency.toUpperCase();
 }
 
 /**
@@ -299,6 +301,7 @@ CoinMarketCap.prototype.getAllCoinsURL = function() {
  * If there are coins with the same symbol, only store the one with the highest market cap.
  */
 CoinMarketCap.prototype.parseAllCoinData = function(data) {
+  var marketCapProperty = 'market_cap_' + this.outputCurrency;
   var coins = {};
   for (var i in data) {
     var coin = data[i];
@@ -307,7 +310,7 @@ CoinMarketCap.prototype.parseAllCoinData = function(data) {
     if (coins[symbol] == undefined) {
       coins[symbol] = coin;
     }
-    else if (parseFloat(coin.market_cap_usd) > parseFloat(coins[symbol].market_cap_usd)) {
+    else if (parseFloat(coin[marketCapProperty]) > parseFloat(coins[symbol][marketCapProperty])) {
       coins[symbol] = coin;
     }
   }
@@ -318,7 +321,7 @@ CoinMarketCap.prototype.parseAllCoinData = function(data) {
  * Return key for price
  */
 CoinMarketCap.prototype.getCoinPriceKey = function() {
-  return "price_usd";
+  return "price_" + this.outputCurrency;
 }
 
 /**************************************************************************************/
