@@ -72,7 +72,7 @@
  * Change this to coinbin or coinmarketcap (or implement a new CryptoService below and use that)
  */
 var DEFAULT_CRYPTO_SERVICE = "coinmarketcap";
-var COINMARKETCAP_OUTPUT_CURRENCY = "eur";
+var COINMARKETCAP_OUTPUT_CURRENCY = "usd";
 
 /**************************************************************************************/
 
