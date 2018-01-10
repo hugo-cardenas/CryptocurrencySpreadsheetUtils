@@ -304,7 +304,7 @@ CoinMarketCap.prototype.getAllCoinsURL = function() {
  * If there are coins with the same symbol, only store the one with the highest market cap.
  */
 CoinMarketCap.prototype.parseAllCoinData = function(data) {
-  var marketCapProperty = 'market_cap_' + this.outputCurrency;
+  var marketCapProperty = 'market_cap_' + this.outputCurrency.toLowerCase();
   var coins = {};
   for (var i in data) {
     var coin = data[i];
@@ -324,7 +324,7 @@ CoinMarketCap.prototype.parseAllCoinData = function(data) {
  * Return key for price
  */
 CoinMarketCap.prototype.getCoinPriceKey = function() {
-  return "price_" + this.outputCurrency;
+  return "price_" + this.outputCurrency.toLowerCase();
 }
 
 /**************************************************************************************/
