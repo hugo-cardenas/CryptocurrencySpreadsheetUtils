@@ -76,6 +76,11 @@ var DEFAULT_CRYPTO_SERVICE = "coinmarketcap";
  * Set here the output display currency of coinmarketcap
  */
 var COINMARKETCAP_OUTPUT_CURRENCY = "usd";
+/*
+ * Formula arguments separator (to be setup depending on locale)
+ * E.g. US locale uses ",", European countries locale uses ";"
+ */
+var FORMULA_ARG_SEPARATOR = ',';
 
 /**************************************************************************************/
 
@@ -436,7 +441,7 @@ function _addTimestampArg(formula) {
   var partAfterFunction="";
   var parts = formula.split(")");
   if (parts.length>1) partAfterFunction = parts[1];
-  var parts = parts[0].split(",");
+  var parts = parts[0].split(FORMULA_ARG_SEPARATOR);
   var lastPart = parts[parts.length-1];
   var newLastPart = '"ts='+now.getTime()+'")' + partAfterFunction;
   if (lastPart.indexOf("ts=")>0)
@@ -444,7 +449,7 @@ function _addTimestampArg(formula) {
   else {
     parts.push(newLastPart);
   }
-  return parts.join(",");
+  return parts.join(FORMULA_ARG_SEPARATOR);
 }
 
 /**
